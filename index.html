@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeetPlaner — общие свободные дни</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#171717;--panel:#202020;--panel2:#292929;--line:#383838;
+  --text:#ededed;--muted:#a1a1a1;--green:#237a50;--green2:#2e9865;
+  --red:#a83e46;--red2:#c34c55;--accent:#858585;--yellow:#c49b50;
+  --shadow:0 18px 50px #0005;
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#f1f2f3;--panel:#ffffff;--panel2:#f5f5f5;--line:#dedede;
+  --text:#292929;--muted:#777;--green:#d9eee2;--green2:#c5e6d3;
+  --red:#f5dfe0;--red2:#edcacc;--accent:#555;--yellow:#e8d9b5;
+  --shadow:0 12px 35px #0000000d;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 15% 0%,#303030 0,transparent 42%),var(--bg);color:var(--text);font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh;transition:background .25s,color .25s}
+:root[data-theme="light"] body{background:radial-gradient(ellipse at 15% 0%,#fff 0,transparent 45%),var(--bg)}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{max-width:1240px;margin:auto;padding:34px 24px 50px}
+header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:28px}
+.brand{display:flex;align-items:center;gap:13px}
+.logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(145deg,#777,#444);display:grid;place-items:center;font-size:23px;box-shadow:0 8px 25px #0003}
+:root[data-theme="light"] .logo{background:linear-gradient(145deg,#555,#333);color:white}
+h1{font-size:25px;letter-spacing:-.7px;margin:0}
+.subtitle{color:var(--muted);font-size:13px;margin-top:2px}
+.header-actions{display:flex;gap:9px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:9px 13px;border-radius:10px;transition:.18s}
+.btn:hover{border-color:#888;transform:translateY(-1px)}
+.btn.primary{background:#555;border-color:#555;color:white;font-weight:650}
+:root[data-theme="light"] .btn.primary{background:#444;border-color:#444;color:white}
+.btn.danger{color:#e68b91}
+:root[data-theme="light"] .btn.danger{color:#b43d46}
+.btn.small{padding:6px 9px;font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow)}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.section-head h2{font-size:16px;margin:0}
+.section-head p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.users-panel{padding:18px;margin-bottom:19px}
+.users-scroll{max-height:250px;overflow:auto;padding:2px 2px 8px}
+.users-grid{display:grid;grid-template-columns:repeat(4,minmax(190px,1fr));gap:11px}
+.user-card{min-height:104px;background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:13px;display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+.user-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.user-name{font-weight:700;overflow-wrap:anywhere}
+.user-type{color:var(--muted);font-size:12px;margin-top:3px}
+.user-actions{display:flex;gap:6px}
+.icon-btn{width:29px;height:29px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text)}
+.icon-btn:hover{background:var(--line)}
+.add-card{min-height:104px;border:1px dashed #777;background:var(--panel2);border-radius:13px;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.add-card:hover{background:var(--panel);border-color:#999}
+.plus{font-size:27px;line-height:1;color:var(--text)}
+.empty-users{color:var(--muted);font-size:13px;padding:15px 4px}
+.calendar-panel{padding:20px}
+.calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.month-title{font-size:21px;font-weight:750;letter-spacing:-.4px}
+.month-controls{display:flex;align-items:center;gap:8px}
+.month-controls input{width:155px}
+.field,input,select,textarea{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px 10px;outline:none;min-width:0}
+.field:focus,input:focus,select:focus{border-color:#888;box-shadow:0 0 0 3px #8882}
+.calendar-wrap{position:relative}
+.weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+.weekday{text-align:center;color:var(--muted);font-size:12px;font-weight:700;padding:7px 0}
+.day{min-height:83px;border:1px solid var(--line);border-radius:11px;padding:9px;background:var(--panel2);position:relative;text-align:left;color:var(--text);transition:.15s;display:flex;flex-direction:column;gap:6px}
+.day:hover{transform:translateY(-2px);filter:brightness(1.08);z-index:3}
+.day.free{background:#244b38;border-color:#376d50;color:#e4f5e9}
+.day.busy{background:#542d31;border-color:#784047;color:#f8e5e6}
+:root[data-theme="light"] .day.free{background:#dcefe3;border-color:#b8ddc7;color:#245b3c}
+:root[data-theme="light"] .day.busy{background:#f5e0e1;border-color:#e7bfc2;color:#8b343b}
+.day.empty{visibility:hidden;pointer-events:none}
+.day.today{outline:2px solid #999;outline-offset:1px}
+.day-number{font-size:17px;font-weight:750}
+.day-state{font-size:11px;opacity:.88}
+.day.manual::after{content:"✎";position:absolute;right:8px;top:8px;font-size:12px;opacity:.85}
+.day .hover-tip{display:none;position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);width:220px;max-width:calc(100vw - 40px);padding:10px;background:#252525;color:#eee;border:1px solid #555;border-radius:10px;box-shadow:0 12px 35px #0005;z-index:10;text-align:left;white-space:normal}
+:root[data-theme="light"] .day .hover-tip{background:#fff;color:#292929;border-color:#ddd}
+.day:hover .hover-tip,.day:focus-visible .hover-tip{display:block}
+.tip-title{font-size:12px;font-weight:750;margin-bottom:6px}
+.tip-list{max-height:120px;overflow:auto;color:inherit;font-size:12px}
+.tip-list div{padding:2px 0}
+.tip-note{color:var(--muted);font-size:11px;margin-top:5px}
+.legend{display:flex;align-items:center;gap:17px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12px}
+.share-btn{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;font-size:13px;font-weight:600;white-space:nowrap;transition:.2s}
+.share-btn:hover{background:var(--line);border-color:#888;transform:translateY(-1px)}
+.share-icon{font-style:normal;font-size:16px;line-height:1}
+@media(max-width:650px){.legend{gap:10px}.share-btn{margin-left:0}}
+.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px}
+.dot.green{background:#399c68}.dot.red{background:#c75a61}.dot.gray{background:#888}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:20px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat-label{color:var(--muted);font-size:12px}
+.stat-value{font-size:27px;font-weight:800;margin-top:4px;letter-spacing:-.6px}
+.stat.free .stat-value{color:#48b87a}.stat.busy .stat-value{color:#d86b72}
+:root[data-theme="light"] .stat.free .stat-value{color:#26804d}
+:root[data-theme="light"] .stat.busy .stat-value{color:#b83e48}
+.hint{margin-top:14px;color:var(--muted);font-size:12px}
+.modal-backdrop{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;padding:18px;z-index:30}
+:root[data-theme="light"] .modal-backdrop{background:#0006}
+.modal-backdrop.open{display:flex}
+.share-modal{width:min(560px,100%)}.share-textarea{width:100%;min-height:190px;resize:vertical;padding:13px;color:var(--text);border:1px solid var(--line);border-radius:10px;outline:none;font:13px/1.7 Consolas,monospace;white-space:pre;tab-size:2}.share-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px #8298ff22}.share-textarea::placeholder{color:var(--muted);opacity:.65}.share-actions{flex-wrap:wrap}.share-actions button{white-space:nowrap}.share-modal code{color:#8fb1ff;font-size:12px}
+.modal{width:min(490px,100%);max-height:min(90vh,780px);overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:17px;box-shadow:0 25px 80px #0005;padding:21px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:17px}
+.modal-head h3{margin:0;font-size:19px}
+.close{background:transparent;border:0;color:var(--muted);font-size:24px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
+.form-row.full{grid-column:1/-1}
+.form-row label{font-size:12px;color:var(--muted);font-weight:650}
+.form-row small{font-size:11px;color:var(--muted)}
+.form-row input,.form-row select{width:100%}
+.hidden{display:none!important}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:17px}
+.notice{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px;margin-top:8px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#e9e9e9;color:#222;padding:10px 16px;border-radius:10px;box-shadow:var(--shadow);font-size:13px;transition:.2s;z-index:50}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.theme-toggle{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--text);display:flex;align-items:center;justify-content:center;transition:.2s}
+.theme-toggle:hover{background:var(--line);transform:rotate(12deg)}
+@media(max-width:900px){.users-grid{grid-template-columns:repeat(3,minmax(170px,1fr))}}
+@media(max-width:650px){.app{padding:22px 12px 35px}header{align-items:flex-start}.header-actions .btn{font-size:12px;padding:8px}.users-grid{grid-template-columns:repeat(2,minmax(145px,1fr))}.users-scroll{max-height:300px}.calendar-panel{padding:13px}.weekdays,.calendar-grid{gap:4px}.day{min-height:66px;padding:6px;border-radius:8px}.day-number{font-size:15px}.day-state{font-size:9px}.month-title{font-size:18px}.stats{gap:6px}.stat{padding:10px}.stat-value{font-size:22px}}
+@media(max-width:390px){.users-grid{grid-template-columns:1fr 1fr}.day{min-height:56px}.day-state{display:none}.form-grid{grid-template-columns:1fr}.form-row.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo">✦</div>
+      <div><h1>MeetPlaner</h1><div class="subtitle">Найдите день, свободный для всех</div></div>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="todayBtn">Сегодня</button>
+      <button class="btn" id="resetOverridesBtn" title="Сбросить ручные изменения текущего месяца">Сбросить изменения</button>
+      <div class="theme-toggle" id="theme-toggle">
+    	<span id="theme-icon">☀️</span>
+	</div>
+    </div>
+  </header>
+
+  <section class="panel users-panel">
+    <div class="section-head">
+      <div><h2>Участники</h2><p>Добавьте людей и укажите их рабочие графики</p></div>
+      <span id="userCount" class="subtitle">0 участников</span>
+    </div>
+    <div class="users-scroll"><div class="users-grid" id="usersGrid"></div></div>
+  </section>
+
+  <section class="panel calendar-panel">
+    <div class="calendar-toolbar">
+      <div><div class="month-title" id="monthTitle">Месяц год</div><div class="subtitle">Нажмите на день, чтобы вручную изменить его статус</div></div>
+      <div class="month-controls">
+        <button class="btn" id="prevMonth" aria-label="Предыдущий месяц">‹</button>
+        <input type="month" id="monthPicker" aria-label="Выбрать месяц">
+        <button class="btn" id="nextMonth" aria-label="Следующий месяц">›</button>
+      </div>
+    </div>
+    <div class="calendar-wrap">
+      <div class="weekdays" id="weekdays"></div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+    <div class="legend">
+      <span><i class="dot green"></i>Все свободны</span>
+      <span><i class="dot red"></i>Есть занятые</span>
+      <span><i class="dot gray"></i>Нет участников</span>
+      <span>✎ — статус изменён вручную</span>
+
+<button class="btn share-btn" id="shareBtn" type="button">
+    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" data-d-component="icon" style="color: white; font-size: 14px; mix-blend-mode: difference;">
+        <path d="M18 18C18 16.8954 17.1046 16 16 16C14.8954 16 14 16.8954 14 18C14 19.1046 14.8954 20 16 20ZM8 12C8 10.8954 7.10457 10 6 10C4.89543 10 4 10.8954 4 12C4 13.1046 4.89543 14 6 14ZM18 6C18 4.89543 17.1046 4 16 4C14.8954 4 14 4.89543 14 6C14 7.10457 14.8954 8 16 8C17.1046 8 18 7.10457 18 6ZM20 6C20 8.20914 18.2091 10 16 10C14.9747 10 14.0399 9.61379 13.332 8.97949L10.2334 11.0469L10.1445 11.0986C10.0709 11.1376 9.99411 11.1654 9.91602 11.1846C9.97056 11.4479 10 11.7205 10 12C10 12.2792 9.97044 12.5514 9.91602 12.8145C9.99419 12.8336 10.0709 12.8624 10.1445 12.9014L10.2334 12.9531L13.332 15.0195C14.0399 14.3855 14.9749 14 16 14C18.2091 14 20 15.7909 20 18C20 20.2091 18.2091 22 16 22C13.7909 22 12 20.2091 12 18C12 17.5387 12.079 17.0959 12.2227 16.6836L9.12305 14.6172C9.10174 14.603 9.08138 14.5878 9.06152 14.5723C8.32777 15.4447 7.22917 16 6 16C3.79086 16 2 14.2091 2 12C2 9.79086 3.79086 8 6 8C7.2289 8 8.32777 8.55468 9.06152 9.42676C9.08123 9.41136 9.10191 9.39692 9.12305 9.38281L12.2227 7.31543C12.0792 6.90334 12 6.46098 12 6C12 3.79086 13.7909 2 16 2C18.2091 2 20 3.79086 20 6Z" fill="currentColor"></path>
+    </svg>
+    <span style="mix-blend-mode: difference; color: white;">Поделиться</span>
+</button>
+
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Дней в месяце</div><div class="stat-value" id="totalDays">0</div></div>
+      <div class="stat free"><div class="stat-label">Общих свободных</div><div class="stat-value" id="freeDays">0</div></div>
+      <div class="stat busy"><div class="stat-label">Занятых</div><div class="stat-value" id="busyDays">0</div></div>
+    </div>
+    <div class="hint">Зелёный день означает, что все участники свободны. Ручные изменения сохраняются отдельно для каждой даты.</div>
+  </section>
+</div>
+
+<div class="modal-backdrop" id="userModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head"><h3 id="modalTitle">Новый участник</h3><button class="close" id="closeModal" aria-label="Закрыть">×</button></div>
+    <form id="userForm">
+      <input type="hidden" id="editId">
+      <div class="form-row"><label for="userName">Имя пользователя</label><input id="userName" maxlength="60" placeholder="Например, Алексей" required></div>
+      <div class="form-row"><label for="scheduleType">Рабочий график</label>
+        <select id="scheduleType">
+          <option value="preset">Готовый график</option>
+          <option value="custom">Свой график (N/N)</option>
+          <option value="manual">Занятые даты месяца</option>
+        </select>
+      </div>
+      <div id="cycleFields">
+        <div class="form-grid">
+          <div class="form-row"><label for="preset">Вариант графика</label>
+            <select id="preset"><option value="2/2">2/2</option><option value="5/2">5/2</option><option value="6/1">6/1</option></select>
+          </div>
+          <div class="form-row"><label for="startDate">Первый рабочий день</label><input type="date" id="startDate" required></div>
+          <div class="form-row full hidden" id="customFields">
+            <div class="form-grid">
+              <div class="form-row"><label for="workDays">Рабочих дней</label><input type="number" id="workDays" min="1" max="365" value="3"></div>
+              <div class="form-row"><label for="restDays">Выходных дней</label><input type="number" id="restDays" min="1" max="365" value="3"></div>
+            </div>
+          </div>
+        </div>
+        <div class="notice">Указанная дата считается первым рабочим днём цикла. Например, для графика 2/2 после двух рабочих дней следуют два выходных.</div>
+      </div>
+      <div id="manualFields" class="hidden">
+        <div class="form-row"><label for="busyDates">Занятые числа выбранного месяца</label><input id="busyDates" placeholder="Например: 3, 8, 14, 23"></div>
+        <small>Числа относятся только к месяцу, выбранному сейчас. При просмотре другого месяца этот пользователь будет считаться свободным, пока вы не зададите даты для него.</small>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn" id="cancelModal">Отмена</button><button type="submit" class="btn primary">Сохранить</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="shareModal">
+  <div class="modal share-modal" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
+
+    <div class="modal-head">
+      <h3 id="shareModalTitle">Поделиться графиком</h3>
+      <button class="close" id="closeShareModal" type="button" aria-label="Закрыть">×</button>
+    </div>
+
+    <div class="form-row">
+      <label for="shareData">Данные участников</label>
+
+      <textarea
+        id="shareData"
+        class="share-textarea"
+        spellcheck="false"
+        placeholder="Имя/график/дата начала..."
+      ></textarea>
+
+      <small>
+        Каждый участник записывается с новой строки.
+        Можно скопировать данные или вставить чужой график.
+      </small>
+    </div>
+
+    <div class="notice">
+      Формат: <b>Имя/график/дата начала</b><br>
+      Например: <code>pasha/2-2/21.11.2026</code><br><br>
+      Для ручного графика: <code>ivan/manual@2026-11/3,8,14</code>
+    </div>
+
+    <div class="modal-actions share-actions">
+      <button type="button" class="btn primary" id="copyShareLink">
+        Скопировать ссылку
+      </button>
+
+      <button type="button" class="btn" id="copyShareData">
+        Скопировать
+      </button>
+
+      <button type="button" class="btn" id="closeShareCancel">
+        Закрыть
+      </button>
+
+      <button type="button" class="btn primary" id="importShareData">
+        Загрузить данные
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+  const STORAGE_KEY = "meetplaner_v1";
+  const $ = id => document.getElementById(id);
+  const monthNames = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+  const monthNamesNominative = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  const weekdays = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+  const today = new Date();
+  let viewed = new Date(today.getFullYear(), today.getMonth(), 1);
+  let users = [];
+  // overrides: { "YYYY-MM-DD": true|false }, true = вручную свободен, false = вручную занят.
+  let overrides = {};
+
+  function load() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      users = Array.isArray(saved.users) ? saved.users : [];
+      overrides = saved.overrides && typeof saved.overrides === "object" ? saved.overrides : {};
+      if (saved.viewed && /^\d{4}-\d{2}$/.test(saved.viewed)) {
+        const [y,m] = saved.viewed.split("-").map(Number);
+        viewed = new Date(y,m-1,1);
+      }
+    } catch (e) { users = []; overrides = {}; }
+  }
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        users, overrides,
+        viewed: `${viewed.getFullYear()}-${pad(viewed.getMonth()+1)}`
+      }));
+    } catch (e) { toast("Не удалось сохранить данные в браузере"); }
+  }
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function dateKey(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
+  function parseDateLocal(str) {
+    if (!str) return null;
+    const [y,m,d] = str.split("-").map(Number);
+    const date = new Date(y,m-1,d);
+    return date.getFullYear()===y && date.getMonth()===m-1 && date.getDate()===d ? date : null;
+  }
+  function daysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
+  function formatDate(date){ return `${pad(date.getDate())}.${pad(date.getMonth()+1)}.${date.getFullYear()}`; }
+  function toast(message){
+    const el=$("toast"); el.textContent=message; el.classList.add("show");
+    clearTimeout(toast.timer); toast.timer=setTimeout(()=>el.classList.remove("show"),2300);
+  }
+  function monthKey(){ return `${viewed.getFullYear()}-${pad(viewed.getMonth()+1)}`; }
+
+  function userBusy(user, date) {
+    if (user.type === "manual") {
+      // Ручной список чисел действует только для месяца, в котором он был введён.
+      if (user.manualMonth !== `${date.getFullYear()}-${pad(date.getMonth()+1)}`) return false;
+      return (user.busyDates || []).includes(date.getDate());
+    }
+    const start = parseDateLocal(user.startDate);
+    if (!start) return false;
+    const work = user.type === "preset"
+      ? Number((user.preset || "2/2").split("/")[0])
+      : Number(user.workDays);
+    const rest = user.type === "preset"
+      ? Number((user.preset || "2/2").split("/")[1])
+      : Number(user.restDays);
+    const cycle = work + rest;
+    if (!Number.isFinite(cycle) || cycle < 2 || work < 1 || rest < 1) return false;
+    const dayMs = 86400000;
+    const diff = Math.round((Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()) -
+      Date.UTC(start.getFullYear(),start.getMonth(),start.getDate())) / dayMs);
+    const position = ((diff % cycle) + cycle) % cycle;
+    return position < work;
+  }
+  function dayInfo(date) {
+    const key = dateKey(date.getFullYear(),date.getMonth(),date.getDate());
+    const busyUsers = users.filter(u => userBusy(u,date));
+    const automatic = users.length > 0 && busyUsers.length > 0 ? "busy" : "free";
+    const hasOverride = Object.prototype.hasOwnProperty.call(overrides,key);
+    const finalStatus = hasOverride ? (overrides[key] ? "free" : "busy") : automatic;
+    return {key,busyUsers,automatic,finalStatus,hasOverride};
+  }
+  function renderUsers() {
+    const grid=$("usersGrid");
+    grid.innerHTML="";
+    $("userCount").textContent=`${users.length} ${plural(users.length,["участник","участника","участников"])}`;
+    const add=document.createElement("button");
+    add.type="button"; add.className="add-card";
+    add.innerHTML='<span class="plus">＋</span><strong>Добавить участника</strong><span class="subtitle">Создать профиль</span>';
+    add.addEventListener("click",()=>openUserModal());
+    grid.appendChild(add);
+    users.forEach(user=>{
+      const card=document.createElement("article"); card.className="user-card";
+      const top=document.createElement("div"); top.className="user-top";
+      const info=document.createElement("div");
+      const name=document.createElement("div"); name.className="user-name"; name.textContent=user.name;
+      const type=document.createElement("div"); type.className="user-type"; type.textContent=scheduleDescription(user);
+      info.append(name,type);
+      const actions=document.createElement("div"); actions.className="user-actions";
+      const edit=document.createElement("button"); edit.className="icon-btn"; edit.type="button"; edit.title="Редактировать"; edit.textContent="✎";
+      edit.addEventListener("click",()=>openUserModal(user.id));
+      const del=document.createElement("button"); del.className="icon-btn"; del.type="button"; del.title="Удалить"; del.textContent="×";
+      del.addEventListener("click",()=>deleteUser(user.id));
+      actions.append(edit,del); top.append(info,actions); card.append(top);
+      grid.appendChild(card);
+    });
+  }
+  function plural(n,forms){const n10=n%10,n100=n%100;return n100>=11&&n100<=14?forms[2]:n10===1?forms[0]:n10>=2&&n10<=4?forms[1]:forms[2];}
+  function scheduleDescription(u){
+    if(u.type==="manual") return `Занятые даты · ${u.manualMonth || "месяц не выбран"}`;
+    const w=u.type==="preset"?u.preset:`${u.workDays}/${u.restDays}`;
+    return `График ${w} · старт ${u.startDate ? formatDate(parseDateLocal(u.startDate)) : "не задан"}`;
+  }
+  function renderCalendar() {
+    const y=viewed.getFullYear(),m=viewed.getMonth(),count=daysInMonth(y,m);
+    $("monthTitle").textContent=`${monthNamesNominative[m]} ${y}`;
+    $("monthPicker").value=monthKey();
+    $("weekdays").innerHTML=weekdays.map(d=>`<div class="weekday">${d}</div>`).join("");
+    const grid=$("calendarGrid"); grid.innerHTML="";
+    const offset=(new Date(y,m,1).getDay()+6)%7;
+    for(let i=0;i<offset;i++){const blank=document.createElement("div");blank.className="day empty";grid.appendChild(blank);}
+    let free=0,busy=0;
+    for(let d=1;d<=count;d++){
+      const date=new Date(y,m,d),info=dayInfo(date);
+      if(info.finalStatus==="free") free++; else busy++;
+      const btn=document.createElement("button");
+      btn.type="button"; btn.className=`day ${info.finalStatus}${info.hasOverride?" manual":""}`;
+      if(date.getFullYear()===today.getFullYear()&&date.getMonth()===today.getMonth()&&date.getDate()===today.getDate()) btn.classList.add("today");
+      btn.setAttribute("aria-label",`${formatDate(date)}: ${info.finalStatus==="free"?"свободен":"занят"}. Нажмите, чтобы изменить.`);
+      const number=document.createElement("span");number.className="day-number";number.textContent=d;
+      const state=document.createElement("span");state.className="day-state";state.textContent=info.finalStatus==="free"?"Свободен":"Занят";
+      const tip=document.createElement("div");tip.className="hover-tip";
+      const title=document.createElement("div");title.className="tip-title";title.textContent=formatDate(date);
+      const list=document.createElement("div");list.className="tip-list";
+      if(info.busyUsers.length){
+        info.busyUsers.forEach(u=>{const row=document.createElement("div");row.textContent="• "+u.name;list.appendChild(row);});
+      } else {
+        const row=document.createElement("div");row.textContent=info.automatic==="free"?"Все участники свободны":"Нет занятых участников";list.appendChild(row);
+      }
+      const note=document.createElement("div");note.className="tip-note";
+      if(info.hasOverride) note.textContent=info.finalStatus==="free"?"Свободен вручную · графики не изменены":"Занят вручную";
+      else if(info.finalStatus==="busy") note.textContent="Нажмите, чтобы освободить день вручную";
+      else note.textContent="Нажмите, чтобы отметить день занятым";
+      tip.append(title,list,note);btn.append(number,state,tip);
+      btn.addEventListener("click",()=>toggleDay(info));
+      grid.appendChild(btn);
+    }
+    // Доводим сетку до полного последнего ряда.
+    const totalCells=offset+count,tail=(7-totalCells%7)%7;
+    for(let i=0;i<tail;i++){const blank=document.createElement("div");blank.className="day empty";grid.appendChild(blank);}
+    $("totalDays").textContent=count;
+    $("freeDays").textContent=free;
+    $("busyDays").textContent=busy;
+  }
+  function toggleDay(info){
+    // Переключаем фактический отображаемый статус; ручной результат закрепляется как исключение.
+    overrides[info.key]=info.finalStatus==="busy";
+    save();renderCalendar();
+  }
+  function openUserModal(id=null){
+    $("userForm").reset(); $("editId").value=id||"";
+    const user=id?users.find(u=>u.id===id):null;
+    $("modalTitle").textContent=user?"Редактировать участника":"Новый участник";
+    $("userName").value=user?.name||"";
+    $("scheduleType").value=user?.type||"preset";
+    $("preset").value=user?.preset||"2/2";
+    $("startDate").value=user?.startDate||localDateInput(today);
+    $("workDays").value=user?.workDays||3;
+    $("restDays").value=user?.restDays||3;
+    $("busyDates").value=(user?.busyDates||[]).join(", ");
+    updateScheduleFields();
+    $("userModal").classList.add("open");
+    setTimeout(()=>$("userName").focus(),50);
+  }
+  function localDateInput(date){return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;}
+  function closeUserModal(){$("userModal").classList.remove("open");}
+  function updateScheduleFields(){
+    const type=$("scheduleType").value;
+    $("cycleFields").classList.toggle("hidden",type==="manual");
+    $("manualFields").classList.toggle("hidden",type!=="manual");
+    $("customFields").classList.toggle("hidden",type!=="custom");
+    $("startDate").required=type!=="manual";
+  }
+  function saveUser(event){
+    event.preventDefault();
+    const name=$("userName").value.trim(),type=$("scheduleType").value,id=$("editId").value;
+    if(!name){toast("Введите имя пользователя");return;}
+    let data={name,type};
+    if(type==="manual"){
+      const raw=$("busyDates").value.trim();
+      const nums=raw?raw.split(/[,\s;]+/).filter(Boolean).map(Number):[];
+      if(nums.some(n=>!Number.isInteger(n)||n<1||n>31)){toast("Введите числа от 1 до 31 через запятую");return;}
+      data.manualMonth=monthKey();
+      data.busyDates=[...new Set(nums)];
+    } else {
+      const start=$("startDate").value;
+      if(!parseDateLocal(start)){toast("Укажите корректную дату начала графика");return;}
+      data.startDate=start;
+      if(type==="preset") data.preset=$("preset").value;
+      else {
+        const work=Number($("workDays").value),rest=Number($("restDays").value);
+        if(!Number.isInteger(work)||!Number.isInteger(rest)||work<1||rest<1||work>365||rest>365){toast("Рабочие и выходные дни должны быть от 1 до 365");return;}
+        data.workDays=work;data.restDays=rest;
+      }
+    }
+    if(id){
+      const index=users.findIndex(u=>u.id===id);
+      if(index!==-1) users[index]={...users[index],...data};
+    } else users.push({id:makeId(),...data});
+    save();renderUsers();renderCalendar();closeUserModal();toast(id?"Изменения сохранены":"Участник добавлен");
+  }
+  function makeId(){return "u_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8);}
+  function deleteUser(id){
+    const user=users.find(u=>u.id===id);if(!user)return;
+    if(!confirm(`Удалить пользователя «${user.name}»?`))return;
+    users=users.filter(u=>u.id!==id);save();renderUsers();renderCalendar();toast("Пользователь удалён");
+  }
+  function changeMonth(delta){viewed=new Date(viewed.getFullYear(),viewed.getMonth()+delta,1);save();renderCalendar();}
+  function resetMonthOverrides(){
+    const prefix=monthKey()+"-";
+    const keys=Object.keys(overrides).filter(k=>k.startsWith(prefix));
+    if(!keys.length){toast("В этом месяце нет ручных изменений");return;}
+    if(!confirm(`Сбросить ${keys.length} ручных изменений за ${monthNamesNominative[viewed.getMonth()]}?`))return;
+    keys.forEach(k=>delete overrides[k]);save();renderCalendar();toast("Ручные изменения сброшены");
+  }
+
+  // ========================================
+  // ОБМЕН ДАННЫМИ УЧАСТНИКОВ
+  // ========================================
+
+  function exportShareData() {
+    return users.map(user => {
+      const name = encodeURIComponent(user.name);
+
+      if (user.type === "manual") {
+        const month = user.manualMonth || monthKey();
+        const dates = (user.busyDates || []).join(",");
+        return `${name}/manual@${month}/${dates}`;
+      }
+
+      const schedule = user.type === "preset"
+        ? user.preset
+        : `${user.workDays}/${user.restDays}`;
+
+      const normalizedSchedule = schedule.replace("/", "-");
+      const start = user.startDate ? parseDateLocal(user.startDate) : null;
+      const date = start ? formatDate(start) : "";
+
+      return `${name}/${normalizedSchedule}/${date}`;
+    }).join("\n");
+  }
+
+  // Кодирование полного состояния приложения для ссылки.
+  // В ссылку входят участники, ручные изменения календаря и выбранный месяц.
+  function encodeShareState() {
+    const payload = {
+      version: 1,
+      users,
+      overrides,
+      viewed: `${viewed.getFullYear()}-${pad(viewed.getMonth()+1)}`
+    };
+    const bytes = new TextEncoder().encode(JSON.stringify(payload));
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  }
+
+  function decodeShareState(encoded) {
+    const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+
+  function createShareLink() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("data", encodeShareState());
+    return url.toString();
+  }
+
+  async function copyShareLink() {
+    try {
+      const link = createShareLink();
+      await navigator.clipboard.writeText(link);
+      toast("Ссылка скопирована");
+    } catch (error) {
+      toast("Не удалось создать или скопировать ссылку");
+    }
+  }
+
+  function loadSharedDataFromUrl() {
+    const url = new URL(window.location.href);
+    const encoded = url.searchParams.get("data");
+    if (!encoded) return false;
+
+    try {
+      if (encoded.length > 150000) throw new Error("Ссылка слишком большая");
+      const shared = decodeShareState(encoded);
+      if (!shared || shared.version !== 1 || !Array.isArray(shared.users) ||
+          !shared.overrides || typeof shared.overrides !== "object" ||
+          Array.isArray(shared.overrides)) {
+        throw new Error("Неверная структура данных");
+      }
+
+      // Проверяем участников до применения полученных данных.
+      shared.users.forEach((user, index) => {
+        if (!user || typeof user.name !== "string" || !user.name.trim() ||
+            !["preset", "custom", "manual"].includes(user.type)) {
+          throw new Error(`Некорректные данные участника №${index + 1}`);
+        }
+      });
+
+      users = shared.users;
+      overrides = shared.overrides;
+
+      if (typeof shared.viewed === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(shared.viewed)) {
+        const [year, month] = shared.viewed.split("-").map(Number);
+        viewed = new Date(year, month - 1, 1);
+      }
+
+      save();
+
+      // Убираем длинный параметр из адресной строки после загрузки.
+      // Скопированная исходная ссылка продолжит работать у других пользователей.
+      url.searchParams.delete("data");
+      history.replaceState({}, "", url.toString());
+      toast("Данные из ссылки загружены");
+      return true;
+    } catch (error) {
+      console.error("Ошибка загрузки данных из ссылки:", error);
+      toast("Не удалось загрузить данные из ссылки");
+      url.searchParams.delete("data");
+      history.replaceState({}, "", url.toString());
+      return false;
+    }
+  }
+
+  function openShareModal() {
+    const modal = $("shareModal");
+    const field = $("shareData");
+    if (!modal || !field) {
+      toast("Не найдена HTML-разметка окна «Поделиться»");
+      return;
+    }
+
+    field.value = exportShareData();
+    modal.classList.add("open");
+    setTimeout(() => field.focus(), 50);
+  }
+
+  function closeShareModal() {
+    const modal = $("shareModal");
+    if (modal) modal.classList.remove("open");
+  }
+
+  async function copyShareData() {
+    const field = $("shareData");
+    if (!field || !field.value.trim()) {
+      toast("Нет данных для копирования");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(field.value);
+      toast("Данные скопированы");
+    } catch (error) {
+      field.focus();
+      field.select();
+      try {
+        document.execCommand("copy");
+        toast("Данные скопированы");
+      } catch (copyError) {
+        toast("Не удалось скопировать. Выделите текст вручную");
+      }
+    }
+  }
+
+  function importShareData() {
+    const field = $("shareData");
+    if (!field) return;
+
+    const raw = field.value.trim();
+    if (!raw) {
+      toast("Вставьте данные участников");
+      return;
+    }
+
+    const lines = raw.split(/\r?\n/).filter(line => line.trim());
+    const importedUsers = [];
+
+    try {
+      lines.forEach((line, index) => {
+        const parts = line.trim().split("/");
+        if (parts.length !== 3) {
+          throw new Error(`Строка ${index + 1}: неправильный формат`);
+        }
+
+        let name;
+        try {
+          name = decodeURIComponent(parts[0]).trim();
+        } catch (error) {
+          throw new Error(`Строка ${index + 1}: ошибка в имени`);
+        }
+
+        const schedule = parts[1].trim();
+        const value = parts[2].trim();
+
+        if (!name) {
+          throw new Error(`Строка ${index + 1}: отсутствует имя`);
+        }
+
+        const user = { id: makeId(), name };
+
+        if (schedule.startsWith("manual@")) {
+          const month = schedule.slice(7);
+
+          if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+            throw new Error(`Строка ${index + 1}: неправильный месяц`);
+          }
+
+          const [year, monthNumber] = month.split("-").map(Number);
+          const maxDay = daysInMonth(year, monthNumber - 1);
+          const dates = value
+            ? value.split(",").map(v => Number(v.trim()))
+            : [];
+
+          if (dates.some(n => !Number.isInteger(n) || n < 1 || n > maxDay)) {
+            throw new Error(`Строка ${index + 1}: неправильные занятые числа`);
+          }
+
+          user.type = "manual";
+          user.manualMonth = month;
+          user.busyDates = [...new Set(dates)];
+        } else {
+          const match = schedule.match(/^(\d+)-(\d+)$/);
+          if (!match) {
+            throw new Error(`Строка ${index + 1}: неправильный график`);
+          }
+
+          const work = Number(match[1]);
+          const rest = Number(match[2]);
+
+          if (!Number.isInteger(work) || !Number.isInteger(rest) ||
+              work < 1 || rest < 1 || work > 365 || rest > 365) {
+            throw new Error(`Строка ${index + 1}: неверные значения графика`);
+          }
+
+          const dateMatch = value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+          if (!dateMatch) {
+            throw new Error(`Строка ${index + 1}: неправильная дата`);
+          }
+
+          const [, day, month, year] = dateMatch;
+          const startDate = `${year}-${month}-${day}`;
+
+          if (!parseDateLocal(startDate)) {
+            throw new Error(`Строка ${index + 1}: несуществующая дата`);
+          }
+
+          user.startDate = startDate;
+          const preset = `${work}/${rest}`;
+
+          if (["2/2", "5/2", "6/1"].includes(preset)) {
+            user.type = "preset";
+            user.preset = preset;
+          } else {
+            user.type = "custom";
+            user.workDays = work;
+            user.restDays = rest;
+          }
+        }
+
+        importedUsers.push(user);
+      });
+    } catch (error) {
+      toast(error.message);
+      return;
+    }
+
+    if (!importedUsers.length) {
+      toast("Нет участников для загрузки");
+      return;
+    }
+
+    if (!confirm(`Загрузить ${importedUsers.length} участников? Текущий список участников будет заменён.`)) {
+      return;
+    }
+
+    users = importedUsers;
+    save();
+    renderUsers();
+    renderCalendar();
+    closeShareModal();
+    toast(`Загружено участников: ${users.length}`);
+  }
+
+  // Подключаем кнопки окна «Поделиться», если HTML-разметка добавлена.
+  if ($("shareBtn")) $("shareBtn").addEventListener("click", openShareModal);
+  if ($("closeShareModal")) $("closeShareModal").addEventListener("click", closeShareModal);
+  if ($("closeShareCancel")) $("closeShareCancel").addEventListener("click", closeShareModal);
+  if ($("copyShareData")) $("copyShareData").addEventListener("click", copyShareData);
+  if ($("copyShareLink")) $("copyShareLink").addEventListener("click", copyShareLink);
+  if ($("importShareData")) $("importShareData").addEventListener("click", importShareData);
+
+  if ($("shareModal")) {
+    $("shareModal").addEventListener("click", e => {
+      if (e.target === $("shareModal")) closeShareModal();
+    });
+  }
+
+  $("scheduleType").addEventListener("change",updateScheduleFields);
+  $("userForm").addEventListener("submit",saveUser);
+  $("closeModal").addEventListener("click",closeUserModal);
+  $("cancelModal").addEventListener("click",closeUserModal);
+  $("userModal").addEventListener("click",e=>{if(e.target===$("userModal"))closeUserModal();});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeUserModal();closeShareModal();}});
+  $("prevMonth").addEventListener("click",()=>changeMonth(-1));
+  $("nextMonth").addEventListener("click",()=>changeMonth(1));
+  $("monthPicker").addEventListener("change",e=>{
+    if(!e.target.value)return;
+    const [y,m]=e.target.value.split("-").map(Number);
+    viewed=new Date(y,m-1,1);save();renderCalendar();
+  });
+  $("todayBtn").addEventListener("click",()=>{viewed=new Date(today.getFullYear(),today.getMonth(),1);save();renderCalendar();});
+  $("resetOverridesBtn").addEventListener("click",resetMonthOverrides);
+
+  load();
+  loadSharedDataFromUrl();
+  renderUsers();
+  renderCalendar();
+})();
+
+
+const themeToggle = document.getElementById('theme-toggle');
+const themeIcon = document.getElementById('theme-icon');
+const root = document.documentElement;
+
+// Применение темы
+function setTheme(theme) {
+    root.setAttribute('data-theme', theme);
+
+    if (theme === 'dark') {
+        themeIcon.textContent = '🌙';
+    } else {
+        themeIcon.textContent = '☀️';
+    }
+
+    localStorage.setItem('theme', theme);
+}
+
+// Загружаем сохранённую тему
+const savedTheme = localStorage.getItem('theme') || 'dark';
+setTheme(savedTheme);
+
+// Переключение темы
+themeToggle.addEventListener('click', () => {
+    const currentTheme = root.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+    setTheme(newTheme);
+});
+</script>
+</body>
+</html>
